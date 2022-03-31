@@ -100,7 +100,7 @@ class PeerConnectionClient(
                         + "webrtc-trace.txt"
             )
         }
-        Timber.i("Create peer connection factory. Use video: true")
+        Timber.tag(TAG).i("Create peer connection factory. Use video: true")
         isError = false
 
         if (peerConnectionParameters.videoCodec != null) {
@@ -110,44 +110,44 @@ class PeerConnectionClient(
                 preferredVideoCodec = VIDEO_CODEC_H264
             }
         }
-        Timber.i("Preferred video codec: $preferredVideoCodec")
+        Timber.tag(TAG).i("Preferred video codec: $preferredVideoCodec")
 
         // Enable/disable OpenSL ES playback.
         if (!peerConnectionParameters.useOpenSLES) {
-            Timber.d("Disable OpenSL ES audio even if device supports it")
+            Timber.tag(TAG).d("Disable OpenSL ES audio even if device supports it")
             WebRtcAudioManager.setBlacklistDeviceForOpenSLESUsage(true /* enable */)
         } else {
-            Timber.d("Allow OpenSL ES audio if device supports it")
+            Timber.tag(TAG).d("Allow OpenSL ES audio if device supports it")
             WebRtcAudioManager.setBlacklistDeviceForOpenSLESUsage(false)
         }
 
         if (peerConnectionParameters.disableBuiltInAEC) {
-            Timber.d("Disable built-in AEC even if device supports it")
+            Timber.tag(TAG).d("Disable built-in AEC even if device supports it")
             WebRtcAudioUtils.setWebRtcBasedAcousticEchoCanceler(true)
         } else {
-            Timber.d("Enable built-in AEC if device supports it")
+            Timber.tag(TAG).d("Enable built-in AEC if device supports it")
             WebRtcAudioUtils.setWebRtcBasedAcousticEchoCanceler(false)
         }
 
         if (peerConnectionParameters.disableBuiltInAGC) {
-            Timber.d("Disable built-in AGC even if device supports it")
+            Timber.tag(TAG).d("Disable built-in AGC even if device supports it")
             WebRtcAudioUtils.setWebRtcBasedAutomaticGainControl(true)
         } else {
-            Timber.d("Enable built-in AGC if device supports it")
+            Timber.tag(TAG).d("Enable built-in AGC if device supports it")
             WebRtcAudioUtils.setWebRtcBasedAutomaticGainControl(false)
         }
 
         if (peerConnectionParameters.disableBuiltInNS) {
-            Timber.d("Disable built-in NS even if device supports it")
+            Timber.tag(TAG).d("Disable built-in NS even if device supports it")
             WebRtcAudioUtils.setWebRtcBasedNoiseSuppressor(true)
         } else {
-            Timber.d("Enable built-in NS if device supports it")
+            Timber.tag(TAG).d("Enable built-in NS if device supports it")
             WebRtcAudioUtils.setWebRtcBasedNoiseSuppressor(false)
         }
 
         val adm: AudioDeviceModule? = createJavaAudioDevice(context, peerConnectionParameters, this)
         if (options != null) {
-            Timber.d("Factory networkIgnoreMask option: %s" + options?.networkIgnoreMask)
+            Timber.tag(TAG).d("Factory networkIgnoreMask option: %s" + options?.networkIgnoreMask)
         }
         val enableH264HighProfile =
             VIDEO_CODEC_H264_HIGH == peerConnectionParameters.videoCodec
@@ -171,7 +171,7 @@ class PeerConnectionClient(
             .setVideoDecoderFactory(decoderFactory)
             .createPeerConnectionFactory()
 
-        Timber.d("Peer connection factory created.")
+        Timber.tag(TAG).d("Peer connection factory created.")
     }
 
     fun getJanusConnectionByHandleId(handleId: BigInteger?) = peerConnectionMap[handleId]
@@ -189,7 +189,7 @@ class PeerConnectionClient(
                 createMediaConstraintsInternal()
 
                 if (factory == null || isError) {
-                    Timber.e("Peer connection factory is not created")
+                    Timber.tag(TAG).e("Peer connection factory is not created")
                     return@execute
                 }
 
@@ -202,7 +202,7 @@ class PeerConnectionClient(
                 findVideoSender(handleId)
             } catch (e: Exception) {
                 reportError("Failed to create peer connection: ${e.message}")
-                Timber.e(e.message)
+                Timber.tag(TAG).e(e.message)
             }
         }
     }
@@ -244,13 +244,13 @@ class PeerConnectionClient(
         if (videoFps == 0) {
             videoFps = VIDEO_FPS
         }
-        Timber.d("Capturing format: " + videoWidth + "x" + videoHeight + "@" + videoFps)
+        Timber.tag(TAG).d("Capturing format: " + videoWidth + "x" + videoHeight + "@" + videoFps)
 
         // Create audio constraints.
         audioConstraints = MediaConstraints()
         // added for audio performance measurements
         if (peerConnectionParameters.noAudioProcessing) {
-            Timber.d("Disabling audio processing")
+            Timber.tag(TAG).d("Disabling audio processing")
             audioConstraints?.mandatory?.add(
                 MediaConstraints.KeyValuePair(
                     AUDIO_ECHO_CANCELLATION_CONSTRAINT,
@@ -299,11 +299,11 @@ class PeerConnectionClient(
 
     private fun switchCameraInternal() {
         if (videoCapturer is CameraVideoCapturer) {
-            Timber.d("Switch camera")
+            Timber.tag(TAG).d("Switch camera")
             val cameraVideoCapturer = videoCapturer as CameraVideoCapturer
             cameraVideoCapturer.switchCamera(null)
         } else {
-            Timber.d("Will not switch camera, video caputurer is not a camera")
+            Timber.tag(TAG).d("Will not switch camera, video caputurer is not a camera")
         }
     }
 
@@ -317,24 +317,24 @@ class PeerConnectionClient(
 
     private fun changeCaptureFormatInternal(width: Int, height: Int, frameRate: Int) {
         if (isError || videoCapturer == null) {
-            Timber.e("Failed to change capture format. Video: true. Error : $isError")
+            Timber.tag(TAG).e("Failed to change capture format. Video: true. Error : $isError")
             return
         }
-        Timber.d("changeCaptureFormat: " + width + "x" + height + "@" + frameRate)
+        Timber.tag(TAG).d("changeCaptureFormat: " + width + "x" + height + "@" + frameRate)
         videoSource?.adaptOutputFormat(width, height, frameRate)
     }
 
     private fun findVideoSender(handleId: BigInteger) {
         val peerConnection: PeerConnection? = peerConnectionMap[handleId]?.peerConnection
         if (peerConnection == null) {
-            Timber.e("Peer connection is null")
+            Timber.tag(TAG).e("Peer connection is null")
             return
         }
         for (sender in peerConnection.senders) {
             if (sender.track() != null) {
                 val trackType = sender.track()!!.kind()
                 if (trackType == VIDEO_TRACK_TYPE) {
-                    Timber.d("Found video sender.")
+                    Timber.tag(TAG).d("Found video sender.")
                     localVideoSender = sender
                 }
             }
@@ -349,7 +349,7 @@ class PeerConnectionClient(
             )
         }, null)
         if (success == false) {
-            Timber.e("getStats() returns false!")
+            Timber.tag(TAG).e("getStats() returns false!")
         }
     }
 
@@ -363,7 +363,7 @@ class PeerConnectionClient(
                 }, 0, periodMs.toLong())
             } catch (e: Exception) {
                 e.printStackTrace()
-                Timber.e(e, "Can not schedule statistics timer")
+                Timber.tag(TAG).e(e, "Can not schedule statistics timer")
             }
         } else {
             statsTimer?.cancel()
@@ -388,7 +388,7 @@ class PeerConnectionClient(
     fun startVideoSource() {
         executor.execute {
             if (videoCapturer != null && videoCapturerStopped) {
-                Timber.d("Restart video source.")
+                Timber.tag(TAG).d("Restart video source.")
                 videoCapturer?.startCapture(videoWidth, videoHeight, videoFps)
                 videoCapturerStopped = false
             }
@@ -398,11 +398,11 @@ class PeerConnectionClient(
     fun stopVideoSource() {
         executor.execute {
             if (videoCapturer != null && !videoCapturerStopped) {
-                Timber.d("Stop video source.")
+                Timber.tag(TAG).d("Stop video source.")
                 try {
                     videoCapturer?.stopCapture()
                 } catch (e: InterruptedException) {
-                    Timber.e(e.message)
+                    Timber.tag(TAG).e(e.message)
                 }
                 videoCapturerStopped = true
             }
@@ -415,14 +415,14 @@ class PeerConnectionClient(
             val connection: JanusConnection? = peerConnectionMap[handleId]
             val peerConnection = connection?.peerConnection
             if (peerConnection != null && !isError) {
-                Timber.d("PC Create OFFER")
+                Timber.tag(TAG).d("PC Create OFFER")
                 peerConnection.createOffer(connection.sdpObserver, sdpMediaConstraints)
             }
         }
     }
 
     fun setRemoteDescription(handleId: BigInteger?, sdp: SessionDescription) {
-        Timber.i("setRemoteDescription (SessionDescription): $sdp")
+        Timber.tag(TAG).i("setRemoteDescription (SessionDescription): $sdp")
         executor.execute {
             val peerConnection = peerConnectionMap[handleId]?.peerConnection
             val sdpObserver = peerConnectionMap[handleId]?.sdpObserver
@@ -434,7 +434,7 @@ class PeerConnectionClient(
     }
 
     fun subscriberHandleRemoteJsep(handleId: BigInteger?, sdp: SessionDescription) {
-        Timber.i("subscriberHandleRemoteJsep (SessionDescription): $sdp")
+        Timber.tag(TAG).i("subscriberHandleRemoteJsep (SessionDescription): $sdp")
         executor.execute {
             val peerConnection = createPeerConnection(handleId!!, false)
             val sdpObserver = peerConnectionMap[handleId]?.sdpObserver
@@ -443,14 +443,14 @@ class PeerConnectionClient(
             }
             val connection = peerConnectionMap[handleId]
             peerConnection.setRemoteDescription(sdpObserver, sdp)
-            Timber.d("PC create ANSWER")
+            Timber.tag(TAG).d("PC create ANSWER")
             peerConnection.createAnswer(connection?.sdpObserver, sdpMediaConstraints)
         }
     }
 
 
     override fun reportError(msg: String?) {
-        Timber.e("Peer connection error: $msg")
+        Timber.tag(TAG).e("Peer connection error: $msg")
         executor.execute {
             if (!isError) {
                 events?.onPeerConnectionError(msg)
@@ -466,19 +466,19 @@ class PeerConnectionClient(
     fun close() = executor.execute { closeInternal() }
 
     private fun closeInternal() {
-        Timber.d("Closing peer connection.")
+        Timber.tag(TAG).d("Closing peer connection.")
         statsTimer?.cancel()
         for ((_, value) in peerConnectionMap.entries) {
             if (value.peerConnection != null) {
                 val peerConnection = value.peerConnection
                 peerConnection?.dispose()
-                Timber.i("closeInternal: ")
+                Timber.tag(TAG).i("closeInternal: ")
             }
         }
-        Timber.d("Closing audio source.")
+        Timber.tag(TAG).d("Closing audio source.")
         audioSource?.dispose()
         audioSource = null
-        Timber.d("Stopping capture.")
+        Timber.tag(TAG).d("Stopping capture.")
         if (videoCapturer != null) {
             try {
                 videoCapturer?.stopCapture()
@@ -490,10 +490,10 @@ class PeerConnectionClient(
             videoCapturer?.dispose()
             videoCapturer = null
         }
-        Timber.d("Closing video source.")
+        Timber.tag(TAG).d("Closing video source.")
         videoSource?.dispose()
         videoSource = null
-        Timber.d("Closing peer connection factory.")
+        Timber.tag(TAG).d("Closing peer connection factory.")
 
         factory?.dispose()
         factory = null
@@ -504,7 +504,7 @@ class PeerConnectionClient(
         options = null
         localRender = null
 
-        Timber.d("Closing peer connection done.")
+        Timber.tag(TAG).d("Closing peer connection done.")
         events?.onPeerConnectionClosed()
         PeerConnectionFactory.stopInternalTracingCapture()
         PeerConnectionFactory.shutdownInternalTracer()
@@ -515,12 +515,12 @@ class PeerConnectionClient(
         private val connection: JanusConnection
     ) : PeerConnection.Observer {
         override fun onSignalingChange(newState: SignalingState?) {
-            Timber.d("SignalingState: $newState")
+            Timber.tag(TAG).d("SignalingState: $newState")
         }
 
         override fun onIceConnectionChange(newState: IceConnectionState?) {
             executor.execute {
-                Timber.d("IceConnectionState: $newState")
+                Timber.tag(TAG).d("IceConnectionState: $newState")
                 when (newState) {
                     IceConnectionState.CONNECTED -> {
                         events?.onIceConnected()
@@ -538,11 +538,11 @@ class PeerConnectionClient(
         }
 
         override fun onIceConnectionReceivingChange(receiving: Boolean) {
-            Timber.d("IceConnectionReceiving changed to $receiving")
+            Timber.tag(TAG).d("IceConnectionReceiving changed to $receiving")
         }
 
         override fun onIceGatheringChange(newState: IceGatheringState?) {
-            Timber.d("IceGatheringState: $newState")
+            Timber.tag(TAG).d("IceGatheringState: $newState")
         }
 
         override fun onIceCandidate(candidates: IceCandidate?) {
@@ -562,7 +562,7 @@ class PeerConnectionClient(
                 if (isError && connection.peerConnection == null) {
                     return@execute
                 }
-                Timber.d(" onAddStream ")
+                Timber.tag(TAG).d(" onAddStream ")
                 if (stream?.videoTracks?.size == 1) {
                     remoteVideoTrack = stream.videoTracks?.get(0)
                     remoteVideoTrack?.setEnabled(true)
@@ -577,7 +577,7 @@ class PeerConnectionClient(
         }
 
         override fun onDataChannel(dc: DataChannel?) {
-            Timber.d("New Data channel " + dc?.label())
+            Timber.tag(TAG).d("New Data channel " + dc?.label())
         }
 
         override fun onRenegotiationNeeded() {
@@ -599,12 +599,12 @@ class PeerConnectionClient(
         private var localSdp: SessionDescription? = null
 
         override fun onCreateSuccess(origSdp: SessionDescription?) {
-            Timber.e("SDP on create success$origSdp")
+            Timber.tag(TAG).e("SDP on create success$origSdp")
             val sdp = SessionDescription(origSdp?.type, origSdp?.description)
             localSdp = sdp
             executor.execute {
                 if (peerConnection != null && !isError) {
-                    Timber.d("Set local SDP from " + sdp.type)
+                    Timber.tag(TAG).d("Set local SDP from " + sdp.type)
                     peerConnection?.setLocalDescription(sdpObserver, sdp)
                 }
             }
@@ -617,17 +617,17 @@ class PeerConnectionClient(
                 }
                 if (type) {
                     if (peerConnection?.remoteDescription == null) {
-                        Timber.d("Local SDP set successfully")
+                        Timber.tag(TAG).d("Local SDP set successfully")
                         events?.onLocalDescription(localSdp, handleId)
                     } else {
-                        Timber.d("Remote SDP set successfully")
+                        Timber.tag(TAG).d("Remote SDP set successfully")
                     }
                 } else {
                     if (peerConnection?.localDescription != null) {
-                        Timber.d("answer Local SDP set successfully")
+                        Timber.tag(TAG).d("answer Local SDP set successfully")
                         events?.onRemoteDescription(localSdp, handleId)
                     } else {
-                        Timber.d("answer Remote SDP set successfully")
+                        Timber.tag(TAG).d("answer Remote SDP set successfully")
                     }
                 }
             }
@@ -640,7 +640,10 @@ class PeerConnectionClient(
         override fun onSetFailure(error: String?) {
             reportError("setSDP error: $error")
         }
+    }
 
+    companion object {
+        const val TAG = "WebSocketChannel"
     }
 
 }

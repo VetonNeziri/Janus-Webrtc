@@ -1,5 +1,7 @@
 package com.veton.januswebrtc.webrtc
 
+const val TAG = "PeerConnectionClient"
+
 const val VIDEO_TRACK_ID = "ARDAMSv0"
 const val AUDIO_TRACK_ID = "ARDAMSa0"
 const val VIDEO_TRACK_TYPE = "video"

@@ -46,7 +46,7 @@ class WebSocketChannel(
         mWebSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 createSession(room)
-                Timber.i("OnWebsocket opened")
+                Timber.tag(TAG).i("OnWebsocket opened")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -58,7 +58,7 @@ class WebSocketChannel(
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                Timber.i("OnWebsocket closing")
+                Timber.tag(TAG).i("OnWebsocket closing")
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -66,11 +66,11 @@ class WebSocketChannel(
                 handles.clear()
                 feeds.clear()
 
-                Timber.i("OnWebsocket closed")
+                Timber.tag(TAG).i("OnWebsocket closed")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Timber.e("onFailure $t")
+                Timber.tag(TAG).e("onFailure $t")
                 errorListener.websocketFailure(t.message)
             }
         })
@@ -78,7 +78,7 @@ class WebSocketChannel(
 
     private fun onMessage(message: String) {
         if (!message.contains("ack")) {
-            Timber.i("onMessage $message")
+            Timber.tag(TAG).i("onMessage $message")
         }
         try {
             val jo = JSONObject(message)
@@ -100,11 +100,11 @@ class WebSocketChannel(
                 }
                 transactions.remove(transaction)
             } else if (janus == "ack") {
-                Timber.i("ack")
+                Timber.tag(TAG).i("ack")
             } else {
                 val handle: JanusHandle? = handles[BigInteger(jo.optString("sender"))]
                 if (handle == null) {
-                    Timber.i("missing handle")
+                    Timber.tag(TAG).i("missing handle")
                 } else if (janus == "event") {
                     val pluginData = jo.optJSONObject("plugindata") ?: return
                     val plugin = pluginData.optJSONObject("data") ?: return
@@ -181,7 +181,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(msg.toString())
-        Timber.i(msg.toString())
+        Timber.tag(TAG).i(msg.toString())
     }
 
     private fun publisherCreateHandle(room: Int) {
@@ -195,7 +195,7 @@ class WebSocketChannel(
                     if (data != null) {
                         janusHandle.handleId = BigInteger(data.optString("id"))
                     } else {
-                        Timber.e("publisherCreateHandle -> data is null.")
+                        Timber.tag(TAG).e("publisherCreateHandle -> data is null.")
                     }
                     janusHandle.onJoined = object : OnJoined {
                         override fun onJoined(jh: JanusHandle) {
@@ -229,7 +229,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(msg.toString())
-        Timber.i(msg.toString())
+        Timber.tag(TAG).i(msg.toString())
     }
 
     private fun publisherJoinRoom(handle: JanusHandle, room: Int) {
@@ -251,7 +251,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(msg.toString())
-        Timber.i(msg.toString())
+        Timber.tag(TAG).i(msg.toString())
     }
 
     fun publisherCreateOffer(handleId: BigInteger?, sdp: SessionDescription?) {
@@ -274,7 +274,7 @@ class WebSocketChannel(
             e.printStackTrace()
         }
         mWebSocket?.send(message.toString())
-        Timber.i(message.toString())
+        Timber.tag(TAG).i(message.toString())
     }
 
     fun subscriberCreateAnswer(handleId: BigInteger?, sdp: SessionDescription?) {
@@ -297,7 +297,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(message.toString())
-        Timber.i(message.toString())
+        Timber.tag(TAG).i(message.toString())
     }
 
     fun trickleCandidate(handleId: BigInteger?, iceCandidate: IceCandidate) {
@@ -317,7 +317,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(message.toString())
-        Timber.i(message.toString())
+        Timber.tag(TAG).i(message.toString())
     }
 
     fun trickleCandidateComplete(handleId: BigInteger?) {
@@ -347,7 +347,7 @@ class WebSocketChannel(
                     if (data != null) {
                         janusHandle.handleId = BigInteger(data.optString("id"))
                     } else {
-                        Timber.e("publisherCreateHandle -> data is null.")
+                        Timber.tag(TAG).e("publisherCreateHandle -> data is null.")
                     }
                     janusHandle.feedId = feed
                     janusHandle.display = display
@@ -384,7 +384,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(msg.toString())
-        Timber.i(msg.toString())
+        Timber.tag(TAG).i(msg.toString())
     }
 
     private fun subscriberJoinRoom(handle: JanusHandle) {
@@ -405,7 +405,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(msg.toString())
-        Timber.i(msg.toString())
+        Timber.tag(TAG).i(msg.toString())
     }
 
     private fun subscriberOnLeaving(handle: JanusHandle) {
@@ -436,7 +436,7 @@ class WebSocketChannel(
             errorListener.jsonException(e.message)
         }
         mWebSocket?.send(jo.toString())
-        Timber.i(jo.toString())
+        Timber.tag(TAG).i(jo.toString())
 
     }
 
@@ -476,6 +476,6 @@ class WebSocketChannel(
     }
 
     companion object {
-        private const val TAG = "WebSocketChannel"
+        private const val TAG = "WsChannel"
     }
 }
