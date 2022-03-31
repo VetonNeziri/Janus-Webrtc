@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Janus Webrtc</string>
+
+    <string name="permissions">Permissions</string>
+    <string name="button_ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="explain_permission_audio_camera">You need to accept camera and audio permissions to make video calls.</string>
+    <string name="permission_denied">Permission not granted</string>
+    <string name="you_ended_call">You ended the call</string>
+</resources>
