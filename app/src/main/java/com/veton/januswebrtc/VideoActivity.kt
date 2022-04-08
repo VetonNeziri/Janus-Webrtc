@@ -22,6 +22,9 @@ class VideoActivity : AppCompatActivity(), PeerConnectionEvents, JanusRTCInterfa
     private lateinit var binding: ActivityVideoBinding
 
     private val url = "ws://85.10.222.248:8188"
+
+//    "ws://85.10.222.248:8188"
+//    wss://devjanus.vitalcheckups.com
     private val roomId = 1234
     private var startWithSpeakerPhone = true
 

@@ -21,7 +21,7 @@ class PeerConnectionClient(
     private val context: Context,
     private val rootEglBase: EglBase,
     private val peerConnectionParameters: PeerConnectionParameters
-) : Errors {
+) : Errors, ObserverInterface {
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var factory: PeerConnectionFactory? = null
     private var options: PeerConnectionFactory.Options? = null
@@ -147,7 +147,7 @@ class PeerConnectionClient(
 
         val adm: AudioDeviceModule? = createJavaAudioDevice(context, peerConnectionParameters, this)
         if (options != null) {
-            Timber.tag(TAG).d("Factory networkIgnoreMask option: %s" + options?.networkIgnoreMask)
+            Timber.tag(TAG).d("Factory networkIgnoreMask option: %s", options?.networkIgnoreMask)
         }
         val enableH264HighProfile =
             VIDEO_CODEC_H264_HIGH == peerConnectionParameters.videoCodec
@@ -210,26 +210,39 @@ class PeerConnectionClient(
     private fun createPeerConnection(handleId: BigInteger, type: Boolean): PeerConnection? {
         val iceServer = IceServer("turn:numb.viagenie.ca:3478", "username", "password")
         val iceServer2 = IceServer("stun:stun.l.google.com:19302")
-        val iceServers = mutableListOf(iceServer, iceServer2)
+        val iceServers = arrayListOf(iceServer, iceServer2)
 
         val rtcConfig = RTCConfiguration(iceServers).apply {
             iceTransportsType = IceTransportsType.ALL
         }
 
+        val pcObserver = PCObserver(
+            executor = executor,
+            events = events!!,
+            isError = isError,
+            this
+        )
+        val sdpObserver = SDPObserver(
+            executor = executor,
+            events = events!!,
+            isError = isError,
+            this
+        )
+
+        val peerConnection = factory?.createPeerConnection(rtcConfig, pcObserver)
+
         val janusConnection = JanusConnection().apply {
             this.handleId = handleId
             this.type = type
+            this.peerConnection = peerConnection
+            this.sdpObserver = sdpObserver
         }
 
-        val pcObserver = PCObserver(janusConnection)
-        val sdpObserver = SDPObserver(janusConnection)
-
-        val peerConnection = factory?.createPeerConnection(rtcConfig, pcConstraints, pcObserver)
-
-        janusConnection.sdpObserver = sdpObserver
-        janusConnection.peerConnection = peerConnection
-
         peerConnectionMap[handleId] = janusConnection
+
+        pcObserver.setConnection(janusConnection)
+        sdpObserver.setConnection(janusConnection)
+
         return peerConnection
     }
 
@@ -402,7 +415,7 @@ class PeerConnectionClient(
                 try {
                     videoCapturer?.stopCapture()
                 } catch (e: InterruptedException) {
-                    Timber.tag(TAG).e(e.message)
+                    Timber.tag(TAG).e(e)
                 }
                 videoCapturerStopped = true
             }
@@ -459,6 +472,17 @@ class PeerConnectionClient(
         }
     }
 
+    override fun onAddStream(connection: JanusConnection, stream: MediaStream?) {
+        remoteVideoTrack = stream?.videoTracks?.get(0)
+        remoteVideoTrack?.setEnabled(true)
+        connection.videoTrack = remoteVideoTrack
+        events?.onRemoteRender(connection)
+    }
+
+    override fun onRemoveStream() {
+        remoteVideoTrack = null
+    }
+
     fun isHDVideo() = videoWidth * videoHeight >= HD_VIDEO_WIDTH * HD_VIDEO_HEIGHT
 
     fun clearAllConnections() = peerConnectionMap.clear()
@@ -509,139 +533,6 @@ class PeerConnectionClient(
         PeerConnectionFactory.stopInternalTracingCapture()
         PeerConnectionFactory.shutdownInternalTracer()
     }
-
-
-    inner class PCObserver(
-        private val connection: JanusConnection
-    ) : PeerConnection.Observer {
-        override fun onSignalingChange(newState: SignalingState?) {
-            Timber.tag(TAG).d("SignalingState: $newState")
-        }
-
-        override fun onIceConnectionChange(newState: IceConnectionState?) {
-            executor.execute {
-                Timber.tag(TAG).d("IceConnectionState: $newState")
-                when (newState) {
-                    IceConnectionState.CONNECTED -> {
-                        events?.onIceConnected()
-                    }
-                    IceConnectionState.DISCONNECTED -> {
-                        events?.onIceDisconnected()
-                    }
-                    IceConnectionState.FAILED -> {
-                        reportError("ICE connection failed.")
-                    }
-
-                    else -> {}
-                }
-            }
-        }
-
-        override fun onIceConnectionReceivingChange(receiving: Boolean) {
-            Timber.tag(TAG).d("IceConnectionReceiving changed to $receiving")
-        }
-
-        override fun onIceGatheringChange(newState: IceGatheringState?) {
-            Timber.tag(TAG).d("IceGatheringState: $newState")
-        }
-
-        override fun onIceCandidate(candidates: IceCandidate?) {
-            executor.execute {
-                events?.onIceCandidate(candidates, connection.handleId)
-            }
-        }
-
-        override fun onIceCandidatesRemoved(candidates: Array<IceCandidate?>?) {
-            executor.execute {
-                events?.onIceCandidatesRemoved(candidates)
-            }
-        }
-
-        override fun onAddStream(stream: MediaStream?) {
-            executor.execute {
-                if (isError && connection.peerConnection == null) {
-                    return@execute
-                }
-                Timber.tag(TAG).d(" onAddStream ")
-                if (stream?.videoTracks?.size == 1) {
-                    remoteVideoTrack = stream.videoTracks?.get(0)
-                    remoteVideoTrack?.setEnabled(true)
-                    connection.videoTrack = remoteVideoTrack
-                    events?.onRemoteRender(connection)
-                }
-            }
-        }
-
-        override fun onRemoveStream(stream: MediaStream?) {
-            executor.execute { remoteVideoTrack = null }
-        }
-
-        override fun onDataChannel(dc: DataChannel?) {
-            Timber.tag(TAG).d("New Data channel " + dc?.label())
-        }
-
-        override fun onRenegotiationNeeded() {
-
-        }
-
-        override fun onAddTrack(p0: RtpReceiver?, p1: Array<out MediaStream>?) {
-
-        }
-
-    }
-
-    inner class SDPObserver(connection: JanusConnection) : SdpObserver {
-        private var peerConnection = connection.peerConnection
-        private var sdpObserver = connection.sdpObserver
-        private var handleId: BigInteger? = connection.handleId
-        private var type: Boolean = connection.type
-
-        private var localSdp: SessionDescription? = null
-
-        override fun onCreateSuccess(origSdp: SessionDescription?) {
-            Timber.tag(TAG).e("SDP on create success$origSdp")
-            val sdp = SessionDescription(origSdp?.type, origSdp?.description)
-            localSdp = sdp
-            executor.execute {
-                if (peerConnection != null && !isError) {
-                    Timber.tag(TAG).d("Set local SDP from " + sdp.type)
-                    peerConnection?.setLocalDescription(sdpObserver, sdp)
-                }
-            }
-        }
-
-        override fun onSetSuccess() {
-            executor.execute {
-                if (peerConnection == null || isError) {
-                    return@execute
-                }
-                if (type) {
-                    if (peerConnection?.remoteDescription == null) {
-                        Timber.tag(TAG).d("Local SDP set successfully")
-                        events?.onLocalDescription(localSdp, handleId)
-                    } else {
-                        Timber.tag(TAG).d("Remote SDP set successfully")
-                    }
-                } else {
-                    if (peerConnection?.localDescription != null) {
-                        Timber.tag(TAG).d("answer Local SDP set successfully")
-                        events?.onRemoteDescription(localSdp, handleId)
-                    } else {
-                        Timber.tag(TAG).d("answer Remote SDP set successfully")
-                    }
-                }
-            }
-        }
-
-        override fun onCreateFailure(error: String?) {
-            reportError("createSDP error: $error")
-        }
-
-        override fun onSetFailure(error: String?) {
-            reportError("setSDP error: $error")
-        }
-    }
-
     companion object {
         const val TAG = "WebSocketChannel"
     }
