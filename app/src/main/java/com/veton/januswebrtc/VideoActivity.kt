@@ -386,12 +386,12 @@ class VideoActivity : AppCompatActivity(), PeerConnectionEvents, JanusRTCInterfa
     override fun onLeaving(handleId: BigInteger) {
         runOnUiThread {
             val connection = peerConnectionClient?.getJanusConnectionByHandleId(handleId)
-            if (connection?.surfaceVideoRender == null) {
-                cleanUpAndFinish()
-                return@runOnUiThread
-            }
-            connection.surfaceVideoRender?.visibility = View.GONE
-            connection.videoTrack?.removeSink(connection.videoRenderer)
+//            if (connection?.surfaceVideoRender == null) {
+//                cleanUpAndFinish()
+//                return@runOnUiThread
+//            }
+            connection?.surfaceVideoRender?.visibility = View.GONE
+            connection?.videoTrack?.removeSink(connection.videoRenderer)
             remotesCount--
 
             handleLeavingRemotes()

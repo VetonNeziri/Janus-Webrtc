@@ -96,7 +96,7 @@ object BaseFunctions {
             override fun onWebRtcAudioTrackStartError(
                 errorCode: JavaAudioDeviceModule.AudioTrackStartErrorCode, errorMessage: String
             ) {
-                Timber.e("onWebRtcAudioTrackStartError: " + errorCode + ". " + errorMessage)
+                Timber.e("onWebRtcAudioTrackStartError: $errorCode. $errorMessage")
                 errors.reportError(errorMessage)
             }
 

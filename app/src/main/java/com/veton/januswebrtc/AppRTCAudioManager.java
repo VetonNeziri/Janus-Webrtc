@@ -169,7 +169,7 @@ public class AppRTCAudioManager {
 		// The |focusChange| value indicates whether the focus was gained, whether the focus was lost,
 		// and whether that loss is transient, or whether the new focus holder will hold it for an
 		// unknown amount of time.
-		// TODO(henrika): possibly extend support of handling audio-focus changes. Only contains
+		// TODO: possibly extend support of handling audio-focus changes. Only contains
 		// logging for now.
 		audioFocusChangeListener = focusChange -> {
 			final String typeOfChange;

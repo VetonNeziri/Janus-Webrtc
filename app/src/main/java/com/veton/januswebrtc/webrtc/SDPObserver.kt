@@ -29,7 +29,7 @@ open class SDPObserver(
     private var localSdp: SessionDescription? = null
 
     override fun onCreateSuccess(origSdp: SessionDescription?) {
-        Timber.tag(PeerConnectionClient.TAG).e("SDP on create success$origSdp")
+        Timber.tag(PeerConnectionClient.TAG).e("SDP on create success $origSdp")
         val sdp = SessionDescription(origSdp?.type, origSdp?.description)
         localSdp = sdp
         executor.execute {

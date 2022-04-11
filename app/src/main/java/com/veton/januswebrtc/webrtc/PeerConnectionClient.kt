@@ -67,7 +67,7 @@ class PeerConnectionClient(
         executor.execute {
             PeerConnectionFactory.initialize(
                 PeerConnectionFactory.InitializationOptions.builder(context)
-                    .setFieldTrials(VIDEO_VP8_INTEL_HW_ENCODER_FIELDTRIAL)
+                    .setFieldTrials(VIDEO_VP8_INTEL_HW_ENCODER_FIELD_TRIAL)
                     .setEnableInternalTracer(true)
                     .createInitializationOptions()
             )
@@ -202,7 +202,7 @@ class PeerConnectionClient(
                 findVideoSender(handleId)
             } catch (e: Exception) {
                 reportError("Failed to create peer connection: ${e.message}")
-                Timber.tag(TAG).e(e.message)
+                Timber.tag(TAG).e(e)
             }
         }
     }

@@ -79,7 +79,7 @@ open class PCObserver(
     }
 
     override fun onDataChannel(dc: DataChannel?) {
-        Timber.tag(PeerConnectionClient.TAG).d("New Data channel " + dc?.label())
+        Timber.tag(PeerConnectionClient.TAG).d("New Data channel %s", dc?.label())
     }
 
     override fun onRenegotiationNeeded() {
